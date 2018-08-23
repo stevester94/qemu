@@ -825,9 +825,32 @@ static inline int64_t get_max_clock_jump(void)
 static inline int64_t get_clock_realtime(void)
 {
     struct timeval tv;
+    static int64_t last_real_time = -1;
+    static int64_t last_dilated_time = -1;
+    int64_t current_time;
+    int64_t dilated_time;
+    int64_t real_time_difference;
+    float dilation_factor = 2.0;
+
 
     gettimeofday(&tv, NULL);
-    return tv.tv_sec * 1000000000LL + (tv.tv_usec * 1000);
+    current_time = tv.tv_sec * 1000000000LL + (tv.tv_usec * 1000);
+
+    if(last_real_time == -1)
+    {
+        last_real_time = current_time;
+        last_dilated_time = current_time;
+        dilated_time = current_time;
+    }
+    else
+    {
+        real_time_difference = current_time - last_real_time;
+        dilated_time = (real_time_difference / dilation_factor) + last_dilated_time;
+        last_real_time = current_time;
+        last_dilated_time = dilated_time;
+    }
+
+    return dilated_time;
 }
 
 /* Warning: don't insert tracepoints into these functions, they are
@@ -849,12 +872,39 @@ extern int use_rt_clock;
 
 static inline int64_t get_clock(void)
 {
+
 #ifdef CLOCK_MONOTONIC
     if (use_rt_clock) {
         struct timespec ts;
+    static int64_t last_real_time = -1;
+    static int64_t last_dilated_time = -1;
+    int64_t current_time;
+    int64_t dilated_time;
+    int64_t real_time_difference;
+    float dilation_factor = 2.0;
+
         clock_gettime(CLOCK_MONOTONIC, &ts);
-        return ts.tv_sec * 1000000000LL + ts.tv_nsec;
-    } else
+        current_time = ts.tv_sec * 1000000000LL + ts.tv_nsec;
+
+        // Begin the Mackey time-dilation kludge!
+        if(last_real_time == -1)
+        {
+            last_real_time = current_time;
+            last_dilated_time = current_time;
+            dilated_time = current_time;
+        }
+        else
+        {
+            real_time_difference = current_time - last_real_time;
+            dilated_time = (real_time_difference / dilation_factor) + last_dilated_time;
+	    last_real_time = current_time;
+            last_dilated_time = dilated_time;
+        }
+        
+//        printf("Current time: %"PRId64"\n", current_time);
+//       printf("Dilated time: %"PRId64"\n", dilated_time); 
+        return dilated_time;
+    }
 #endif
     {
         /* XXX: using gettimeofday leads to problems if the date
