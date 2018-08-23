@@ -7140,7 +7140,6 @@ static target_ulong disas_insn(DisasContext *s, CPUState *cpu)
         }
         break;
     case 0x131: /* rdtsc */
-	printf("Holy shit balls, got a RDSTC");
         gen_update_cc_op(s);
         gen_jmp_im(pc_start - s->cs_base);
         if (tb_cflags(s->base.tb) & CF_USE_ICOUNT) {
