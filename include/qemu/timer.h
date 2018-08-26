@@ -876,33 +876,31 @@ static inline int64_t get_clock(void)
 #ifdef CLOCK_MONOTONIC
     if (use_rt_clock) {
         struct timespec ts;
-    static int64_t last_real_time = -1;
-    static int64_t last_dilated_time = -1;
+    static int64_t start_time = -1;
     int64_t current_time;
     int64_t dilated_time;
-    int64_t real_time_difference;
     float dilation_factor = 2.0;
 
         clock_gettime(CLOCK_MONOTONIC, &ts);
         current_time = ts.tv_sec * 1000000000LL + ts.tv_nsec;
 
         // Begin the Mackey time-dilation kludge!
-        if(last_real_time == -1)
+        if(start_time == -1)
         {
-            last_real_time = current_time;
-            last_dilated_time = current_time;
-            dilated_time = current_time;
+            start_time = current_time;
+            dilated_time = start_time;
         }
         else
         {
-            real_time_difference = current_time - last_real_time;
-            dilated_time = (real_time_difference / dilation_factor) + last_dilated_time;
-	    last_real_time = current_time;
-            last_dilated_time = dilated_time;
+            dilated_time = start_time + (current_time - start_time) / dilation_factor;
         }
-        
-//        printf("Current time: %"PRId64"\n", current_time);
-//       printf("Dilated time: %"PRId64"\n", dilated_time); 
+      
+            //printf("Current time: %"PRId64"\n", current_time);
+            //printf("Dilated time: %"PRId64"\n", dilated_time); 
+
+        // Reverse my hack!!!
+        dilated_time = current_time;
+
         return dilated_time;
     }
 #endif
