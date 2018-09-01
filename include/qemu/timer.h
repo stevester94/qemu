@@ -850,6 +850,8 @@ static inline int64_t get_clock_realtime(void)
         last_dilated_time = dilated_time;
     }
 
+    // Reverse my hack!
+    //dilated_time = current_time;
     return dilated_time;
 }
 
@@ -899,7 +901,7 @@ static inline int64_t get_clock(void)
             //printf("Dilated time: %"PRId64"\n", dilated_time); 
 
         // Reverse my hack!!!
-        dilated_time = current_time;
+        //dilated_time = current_time;
 
         return dilated_time;
     }
