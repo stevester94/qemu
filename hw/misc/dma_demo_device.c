@@ -40,6 +40,7 @@ static void write_to_dma(State* state)
     // printf("Writing to DMA: %d\n", (int)random);
     pci_dma_write(&state->pdev, dma_address & dma_mask, buffer, DMA_SIZE);
 }
+
 static uint64_t get_epoch_ms()
 {
     uint64_t            ms; // Milliseconds
@@ -48,10 +49,11 @@ static uint64_t get_epoch_ms()
 
     clock_gettime(CLOCK_REALTIME, &spec);
 
-    ms = spec.tv_sec * 1000;
+    ms = spec.tv_sec*1000 + spec.tv_nsec/1000;
 
     return ms;
 }
+
 static void mmio_write(void *opaque, hwaddr addr, uint64_t val,
         unsigned size)
 {
@@ -94,7 +96,9 @@ static void mmio_write(void *opaque, hwaddr addr, uint64_t val,
             }
             printf("checksum: %"PRIu64"\n", checksum);
             end_time = get_epoch_ms();
+            printf("Start time: %"PRIu64"\n", start_time);
             printf("Done at %" PRIu64 "\n", end_time);
+            printf("Elapsed time: %"PRIu64 "\n", end_time-start_time);
             printf("Effective data rate: %f Bytes/sec\n", ((float)num_transfers)*DMA_SIZE / ((end_time-start_time)/1000));
         break;
     }
