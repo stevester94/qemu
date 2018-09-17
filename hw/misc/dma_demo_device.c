@@ -15,6 +15,7 @@ static uint64_t dma_mask = 0xFFFFFFF;
 #define DMA_SIZE 4096 // Transfers shall be of uint8_t
 
 static int num_transfers = -1;
+static int actual_transfers = 0;
 static uint64_t checksum = 0;
 
 static uint64_t start_time, end_time;
@@ -39,6 +40,7 @@ static void write_to_dma(State* state)
     }
     // printf("Writing to DMA: %d\n", (int)random);
     pci_dma_write(&state->pdev, dma_address & dma_mask, buffer, DMA_SIZE);
+    actual_transfers++;
 }
 
 static uint64_t get_epoch_ms()
@@ -49,8 +51,8 @@ static uint64_t get_epoch_ms()
 
     clock_gettime(CLOCK_REALTIME, &spec);
 
-    ms = spec.tv_sec*1000 + spec.tv_nsec/1000;
-
+    // ms = spec.tv_sec*1000 + spec.tv_nsec/1000;
+    ms = spec.tv_sec*1000; // We'll ignore the high resolution shit, nsec was being weird
     return ms;
 }
 
@@ -58,6 +60,7 @@ static void mmio_write(void *opaque, hwaddr addr, uint64_t val,
         unsigned size)
 {
     State *state = opaque;
+    float num_bytes_transferred;
 
     switch (addr) {
 
@@ -85,6 +88,7 @@ static void mmio_write(void *opaque, hwaddr addr, uint64_t val,
             num_transfers = val;
             printf("Attempting %d transfers\n", num_transfers);
             start_time =  get_epoch_ms();
+            printf("Start time: %"PRIu64"\n", start_time);
             write_to_dma(state);
             pci_set_irq(&state->pdev, 1); // Indicate DMA is complete, ready to be handled
         break;
@@ -99,7 +103,10 @@ static void mmio_write(void *opaque, hwaddr addr, uint64_t val,
             printf("Start time: %"PRIu64"\n", start_time);
             printf("Done at %" PRIu64 "\n", end_time);
             printf("Elapsed time: %"PRIu64 "\n", end_time-start_time);
-            printf("Effective data rate: %f Bytes/sec\n", ((float)num_transfers)*DMA_SIZE / ((end_time-start_time)/1000));
+            num_bytes_transferred = actual_transfers*DMA_SIZE;
+            printf("processed transfers: %d\n", actual_transfers);
+            printf("total bytes transferred: %f\n", num_bytes_transferred);
+            printf("Effective data rate: %f MBytes/sec\n", ( num_bytes_transferred / (end_time-start_time))*1000/1024/1024);
         break;
     }
 }
